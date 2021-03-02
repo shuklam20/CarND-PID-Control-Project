@@ -12,8 +12,27 @@ void PID::Init(double Kp_, double Ki_, double Kd_) {
 	Kp = Kp_;
 	Ki = Ki_;
 	Kd = Kd_;
-	prev_cte = 0;
-	accum_cte = 0;
+	prev_cte = 0.0;
+	accum_cte = 0.0;
+    best_error = 0.0;
+    current_err = 0.0;
+    n = sizeof(dp) / sizeof(dp[0]);
+    twiddle_call = 0;
+}
+
+void PID::UpdateParams(double K_, int i) {
+    // Update PID coefficients while using twiddle
+    switch(i) {
+        case 0:
+            Kp = K_;
+            break;
+        case 1:
+            Ki = K_;
+            break;
+        case 2:
+            Kd = K_;
+            break;
+    }
 }
 
 void PID::UpdateError(double cte) {
@@ -26,45 +45,37 @@ void PID::UpdateError(double cte) {
 }
 
 double PID::TotalError() {
-    if (use_twiddle) {
-        Kp = p[0];
-        Ki = p[1];
-        Kd = p[2];
-    }
-    //std::cout << "value of Kp " << Kp << " Ki " << Ki << " and Kd " << Kd << std::endl;
 	// Calculate and return the total error
-	return (Kp * p_error + Kd * d_error + Ki * i_error);
+	return -(Kp * p_error + Kd * d_error + Ki * i_error);
 }
 
 void PID::Twiddle(double tol, double cte) {
-    use_twiddle = true;
-    int n = sizeof(dp) / sizeof(dp[0]);
+    twiddle_call += 1;
+    current_err += (cte * cte);
+    current_err /= twiddle_call;
     for (int i=0; i<n; i++) {
         dp[i] = 1;
         p[i] = 0;
     }
     
-    double best_error = TotalError();
 	int it = 0;
-	double err;
-
 	while (arr_sum(dp, n) > tol) {
+        std::cout << "arr_sum(dp, n)" << arr_sum(dp, n) << std::endl;
+        std::cout << "current_err " << current_err << "best_error " << best_error << std::endl;
         for (int i=0; i<n; i++) {
             p[i] += dp[i];
-            UpdateError(cte);
-            err = TotalError();
-
-            if (err < best_error) { // There was some improvement
-                best_error = err;
+            UpdateParams(p[i], i);
+            
+            if (current_err < best_error) { // There was some improvement
+                best_error = current_err;
                 dp[i] *= 1.1;
             }
             else { // No improvement
                 p[i] -= 2 * dp[i];
-                UpdateError(cte);
-                err = TotalError();
+                UpdateParams(p[i], i);
                 
-                if (err < best_error) { // There was an improvement
-                    best_error = err;
+                if (current_err < best_error) { // There was an improvement
+                    best_error = current_err;
                     dp[i] *= 1.1;
                 }
                 else { // No improvement
@@ -75,10 +86,9 @@ void PID::Twiddle(double tol, double cte) {
         }
         it += 1;
 	}
+    std::cout << "value of Kp " << Kp << " Ki " << Ki << " and Kd " << Kd << std::endl;
 	std::cout << "total_it " << it << std::endl;
 }
-
-
 
 double PID::arr_sum(double dp[], int n) {
 	double dp_sum = 0.0;
