@@ -35,7 +35,7 @@ class PID {
 	* Calculate Kp, Kd and Ki values
 	* given a tolerance parameter
 	*/
-	void Twiddle(double tol);
+	void Twiddle(double tol, double cte);
 
 	/**
 	* Calculate the sum of a given array
@@ -64,6 +64,9 @@ class PID {
 	*/
 	double prev_cte;
 	double accum_cte;
+    double dp[3];
+    double p[3];
+    float use_twiddle = false;
 };
 
 #endif  // PID_H

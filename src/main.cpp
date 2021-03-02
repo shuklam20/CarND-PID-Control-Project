@@ -57,12 +57,15 @@ int main() {
 					double speed = std::stod(j[1]["speed"].get<string>());
 					double angle = std::stod(j[1]["steering_angle"].get<string>());
 					double steer_value;
-
-					// Update the error with the new cross track error
-					pid.UpdateError(cte);
+                    bool use_twiddle = false;
+                    
+                    if (use_twiddle)
+                        pid.Twiddle(0.05, cte);
+                    else
+                        pid.UpdateError(cte);
 
 					// Calculate the new steering value
-					steer_value = pid.TotalError();
+					steer_value = -pid.TotalError();
 					if (steer_value > 1) steer_value = 1;
 					if (steer_value < -1) steer_value = -1;
 

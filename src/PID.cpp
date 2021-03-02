@@ -12,7 +12,6 @@ void PID::Init(double Kp_, double Ki_, double Kd_) {
 	Kp = Kp_;
 	Ki = Ki_;
 	Kd = Kd_;
-//	Twiddle(0.05);
 	prev_cte = 0;
 	accum_cte = 0;
 }
@@ -27,46 +26,56 @@ void PID::UpdateError(double cte) {
 }
 
 double PID::TotalError() {
+    if (use_twiddle) {
+        Kp = p[0];
+        Ki = p[1];
+        Kd = p[2];
+    }
+    //std::cout << "value of Kp " << Kp << " Ki " << Ki << " and Kd " << Kd << std::endl;
 	// Calculate and return the total error
-	return -(Kp * p_error + Kd * d_error + Ki * i_error);
+	return (Kp * p_error + Kd * d_error + Ki * i_error);
 }
 
-void PID::Twiddle(double tol) {
-	double dp[3] = {1, 1, 1};
-	Kp = 0;
-	Ki = 0;
-	Kd = 0;
-
-	double best_error = TotalError();
+void PID::Twiddle(double tol, double cte) {
+    use_twiddle = true;
+    int n = sizeof(dp) / sizeof(dp[0]);
+    for (int i=0; i<n; i++) {
+        dp[i] = 1;
+        p[i] = 0;
+    }
+    
+    double best_error = TotalError();
 	int it = 0;
 	double err;
-	int n = sizeof(dp) / sizeof(dp[0]);
+
 	while (arr_sum(dp, n) > tol) {
-		Kp += dp[0]; Ki += dp[1]; Kd += dp[2];
-		err = TotalError();
+        for (int i=0; i<n; i++) {
+            p[i] += dp[i];
+            UpdateError(cte);
+            err = TotalError();
 
-		if (err < best_error) {
-			best_error = err;
-			dp[0] *= 1.1; dp[1] *= 1.1; dp[2] *= 1.1;
-		}
-		else {
-			Kp -= 2 * dp[0]; Ki -= 2 * dp[1]; Kd -= 2 * dp[2];
-			std::cout << "value of Kp " << Kp << " Ki " << Ki << " and Kd " << Kd << std::endl;
-
-			err = TotalError();
-			if (err < best_error) {
-				best_error = err;
-				dp[0] *= 1.1; dp[1] *= 1.1; dp[2] *= 1.1;
-			}
-			else {
-				Kp += dp[0]; Ki += dp[1]; Kd += dp[2];
-				dp[0] *= 0.9; dp[1] *= 0.9; dp[2] *= 0.9;
-			}
-		}
-	    it += 1;
+            if (err < best_error) { // There was some improvement
+                best_error = err;
+                dp[i] *= 1.1;
+            }
+            else { // No improvement
+                p[i] -= 2 * dp[i];
+                UpdateError(cte);
+                err = TotalError();
+                
+                if (err < best_error) { // There was an improvement
+                    best_error = err;
+                    dp[i] *= 1.1;
+                }
+                else { // No improvement
+                    Kp += dp[0];
+                    dp[i] *= 0.9;
+                }
+            }
+        }
+        it += 1;
 	}
-//	std::cout << "value of Kp " << Kp << " Ki " << Ki << " and Kd " << Kd << std::endl;
-//	std::cout << "total_it " << it << std::endl;
+	std::cout << "total_it " << it << std::endl;
 }
 
 
