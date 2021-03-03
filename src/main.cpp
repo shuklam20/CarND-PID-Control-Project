@@ -36,7 +36,7 @@ int main() {
 	PID pid;
     PID pid_t;
 	//Initialize the PID variable.
-	pid.Init(0.04, 0.0001, 10.0);
+	pid.Init(0.04, 0.001, 4.0);
     pid_t.Init(0.04, 0.0001, 5.0);
 
 
@@ -56,8 +56,8 @@ int main() {
 				if (event == "telemetry") {
 					// j[1] is the data JSON object
 					double cte = std::stod(j[1]["cte"].get<string>());
-					double speed = std::stod(j[1]["speed"].get<string>());
-					double angle = std::stod(j[1]["steering_angle"].get<string>());
+//					double speed = std::stod(j[1]["speed"].get<string>());
+//					double angle = std::stod(j[1]["steering_angle"].get<string>());
 					double steer_value;
                     double throttle_value;
                     
@@ -84,7 +84,7 @@ int main() {
 
 					json msgJson;
 					msgJson["steering_angle"] = steer_value;
-					msgJson["throttle"] = throttle_value;
+                    msgJson["throttle"] = 0.3; //throttle_value;
 					auto msg = "42[\"steer\"," + msgJson.dump() + "]";
 					std::cout << msg << std::endl;
 					ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);

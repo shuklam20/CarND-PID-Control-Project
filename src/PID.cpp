@@ -10,8 +10,9 @@ PID::~PID() {}
 void PID::Init(double Kp_, double Ki_, double Kd_) {
 	// Initialize PID coefficients (and errors, if needed)
 	Kp = Kp_;
-	Ki = Ki_;
-	Kd = Kd_;
+    Ki = Ki_;
+    Kd = Kd_;
+    
 	prev_cte = 0.0;
 	accum_cte = 0.0;
     best_error = 0.0;
@@ -53,6 +54,7 @@ void PID::Twiddle(double tol, double cte) {
     twiddle_call += 1;
     current_err += (cte * cte);
     current_err /= twiddle_call;
+    best_error = (cte * cte);
     for (int i=0; i<n; i++) {
         dp[i] = 1;
         p[i] = 0;
@@ -60,33 +62,37 @@ void PID::Twiddle(double tol, double cte) {
     
 	int it = 0;
 	while (arr_sum(dp, n) > tol) {
-        std::cout << "arr_sum(dp, n)" << arr_sum(dp, n) << std::endl;
-        std::cout << "current_err " << current_err << "best_error " << best_error << std::endl;
+//        std::cout << "arr_sum(dp, n)" << arr_sum(dp, n) << std::endl;
+//        std::cout << "current_err " << current_err << "best_error " << best_error << std::endl;
         for (int i=0; i<n; i++) {
             p[i] += dp[i];
             UpdateParams(p[i], i);
             
             if (current_err < best_error) { // There was some improvement
+                std::cout << "loop 1" << std::endl;
                 best_error = current_err;
                 dp[i] *= 1.1;
             }
             else { // No improvement
+                std::cout << "loop 2" << std::endl;
                 p[i] -= 2 * dp[i];
                 UpdateParams(p[i], i);
                 
                 if (current_err < best_error) { // There was an improvement
+                    std::cout << "loop 2a" << std::endl;
                     best_error = current_err;
                     dp[i] *= 1.1;
                 }
                 else { // No improvement
-                    Kp += dp[0];
+                    std::cout << "loop 2b" << std::endl;
+                    p[i] += dp[0];
                     dp[i] *= 0.9;
                 }
             }
         }
         it += 1;
 	}
-    std::cout << "value of Kp " << Kp << " Ki " << Ki << " and Kd " << Kd << std::endl;
+//    std::cout << "value of Kp " << Kp << " Ki " << Ki << " and Kd " << Kd << std::endl;
 	std::cout << "total_it " << it << std::endl;
 }
 
